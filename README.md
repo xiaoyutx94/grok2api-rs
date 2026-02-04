@@ -2,16 +2,14 @@
 
 > 本项目基于 [grok2api](https://github.com/chenyme/grok2api) 重构。
 
-
 > [!NOTE]
 > 本项目仅供学习与研究，使用者必须在遵循 Grok 的 **使用条款** 以及 **法律法规** 的情况下使用，不得用于非法用途。
-
 
 ## 1. 后端重构说明
 
 - 使用 Rust + Axum 重写服务端，保持 OpenAI 兼容接口与管理后台能力。
 - 静态资源内置到二进制，支持单个二进制文件部署。
-- 上游 Grok 请求统一走 `curl-impersonate`，避免被上游拦截。
+- 上游 Grok 请求统一走 `curl-impersonate`，降低被上游拦截概率。
 - 配置加载合并默认值，支持后台在线修改并持久化。
 
 ## 2. 安装步骤
@@ -107,17 +105,39 @@ enable_models = true
 enable_files = true
 ```
 
-> Grok Token 号池存储于 `data/token.json`;
+> Grok Token 号池存储于 `data/token.json`。
 
 ### 单文件部署参考目录结构
 
 ```
-grok2api-rs/
-├─ grok2api-rs            # 可执行文件
-└─ data/
-   ├─ config.toml         # 配置文件(手工创建，直接复制上给出的模版)
-   ├─ token.json          # Token 号池(导入后自动创建)
-   └─ curl-impersonate    # curl-impersonate 可执行文件（或放入系统 PATH）
+/grok2api-rs
+├─ grok2api-rs
+└─ data
+   ├─ config.toml
+   ├─ token.json
+   └─ curl-impersonate
+      └─ curl_chrome116
+```
+
+### 二进制文件部署教程（命令行）
+
+```bash
+# 1) 准备目录
+mkdir -p grok2api-rs/data/curl-impersonate
+
+# 2) 配置文件
+cp config.defaults.toml grok2api-rs/data/config.toml
+
+# 3) Token 号池
+cp /path/to/token.json grok2api-rs/data/token.json
+
+# 4) curl-impersonate 可执行文件
+cp /path/to/curl_chrome116 grok2api-rs/data/curl-impersonate/curl_chrome116
+chmod +x grok2api-rs/data/curl-impersonate/curl_chrome116
+
+# 5) 启动服务（确保 config.toml 中 curl_path 指向上面的路径）
+chmod +x grok2api-rs/grok2api-rs
+SERVER_HOST=0.0.0.0 SERVER_PORT=8000 ./grok2api-rs/grok2api-rs
 ```
 
 ### 项目编译教程（命令行）
@@ -130,28 +150,31 @@ cargo build --release
 cargo zigbuild --release --target x86_64-unknown-linux-musl
 ```
 
-### 二进制文件部署教程（命令行）
+### curl 调用示例
+
+Chat Completions：
 
 ```bash
-# 1) 准备目录
-mkdir -p grok2api-rs/data
-
-# 2) 配置文件
-cp config.defaults.toml grok2api-rs/data/config.toml
-
-# 3) Token 号池
-cp /path/to/token.json grok2api-rs/data/token.json
-
-# 4) curl-impersonate 可执行文件
-cp /path/to/curl_chrome116 grok2api-rs/data/curl-impersonate
-chmod +x grok2api-rs/data/curl-impersonate
-
-# 5) 启动服务（根据实际路径修改 curl_path）
-chmod +x grok2api-rs/grok2api-rs
-SERVER_HOST=0.0.0.0 SERVER_PORT=8000 ./grok2api-rs/grok2api-rs
+curl http://127.0.0.1:8000/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -d '{
+    "model": "grok-4",
+    "messages": [{"role":"user","content":"你好"}]
+  }'
 ```
 
-> 确保 `data/config.toml` 中的 `grok.curl_path` 指向实际可执行文件路径。
+Responses API：
+
+```bash
+curl http://127.0.0.1:8000/v1/responses \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -d '{
+    "model": "grok-4",
+    "input": "你好"
+  }'
+```
 
 ## 3. 与原项目相比缺失的内容
 
