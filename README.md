@@ -76,8 +76,9 @@ cd grok2api-rs
 
 mkdir -p data
 cp config.defaults.toml data/config.toml
+cp data/token.json.example data/token.json
 
-# 首次启动若 data/token.json 不存在，会自动创建 {"ssoBasic": []}
+# 也可不手动复制 token.json，容器首次启动会自动创建 {"ssoBasic": []}
 docker compose pull
 docker compose up -d
 docker compose logs -f
